@@ -50,6 +50,9 @@ export default function Navbar() {
             <button onClick={() => goHomeAndMaybeScroll("contact")} className="hover:text-yellow-600">Contact</button>
           </li>
           <li>
+            <button onClick={() => { navigate('/view-map'); setIsOpen(false); }} className="hover:text-yellow-600">View Map</button>
+          </li>
+          <li>
             {isAuthenticated ? (
               <button onClick={() => { navigate('/account'); setIsOpen(false); }} className="hover:text-yellow-600">Account</button>
             ) : (
@@ -96,6 +99,7 @@ export default function Navbar() {
             <li><button onClick={() => goHomeAndMaybeScroll()}>Home</button></li>
             <li><button onClick={() => goHomeAndMaybeScroll("gallery")}>Gallery</button></li>
             <li><button onClick={() => goHomeAndMaybeScroll("contact")}>Contact</button></li>
+            <li><button onClick={() => { navigate('/view-map'); setIsOpen(false); }}>View Map</button></li>
             <li>
               {isAuthenticated ? (
                 <button onClick={() => { navigate('/account'); setIsOpen(false); }}>Account</button>

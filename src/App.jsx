@@ -18,6 +18,7 @@ import Account from './pages/Account'
 import HoardingDashboard from './pages/HoardingDashboard'
 import AdItemDetails from './pages/AdItemDetails'
 import MapHoardings from './pages/MapHoardings'
+import ViewMap from './pages/ViewMap'
 import ContactMessagesDashboard from './pages/ContactMessagesDashboard'
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
         <Route path="/unipole" element={<UnipoleDashboard />} />
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/map" element={<MapHoardings />} />
+        <Route path="/view-map" element={<ViewMap />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/booking" element={<Booking />} />
