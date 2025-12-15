@@ -35,15 +35,7 @@ export default function HoardingDashboard() {
       expiryDate: "2025-12-31",
     },
     {
-      id: 2,
-      title: "City Center LED Board",
-      locationName: "Near DYP Mall, Kolhapur",
-      lat: 16.7065,
-      lng: 74.2439,
-      size: "15x8 ft",
-      price: 18000,
-      available: false,
-      expiryDate: "2025-11-15",
+      
     },
   ];
 

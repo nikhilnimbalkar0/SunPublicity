@@ -22,13 +22,23 @@ import ViewMap from './pages/ViewMap'
 import ContactMessagesDashboard from './pages/ContactMessagesDashboard'
 
 function App() {
- 
+
 
   return (
     <>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/hoardings" element={<HoardingDashboard />} />
+
+        {/* Firebase category routes */}
+        <Route path="/auto-promotion" element={<DowntownBillboard />} />
+        <Route path="/digital-board" element={<CityCenterLEDDashboard />} />
+        <Route path="/hording" element={<HighwayDashboard />} />
+        <Route path="/shop-boards" element={<ShoppingMallDashboard />} />
+        <Route path="/van-promotions" element={<EventPromotionDashboard />} />
+        <Route path="/wall-paintings" element={<CorporateAdSpaceDashboard />} />
+
+        {/* Legacy routes (keep for backward compatibility) */}
         <Route path="/downtown-billboard" element={<DowntownBillboard />} />
         <Route path="/billboard/:id" element={<BillboardDetails />} />
         <Route path="/:category/:id" element={<AdItemDetails />} />
@@ -39,6 +49,8 @@ function App() {
         <Route path="/led" element={<CityCenterLEDDashboard />} />
         <Route path="/corporate" element={<CorporateAdSpaceDashboard />} />
         <Route path="/unipole" element={<UnipoleDashboard />} />
+
+        {/* Other routes */}
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/map" element={<MapHoardings />} />
         <Route path="/view-map" element={<ViewMap />} />

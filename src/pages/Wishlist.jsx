@@ -1,4 +1,5 @@
 import React from "react";
+import { getCloudinaryUrl } from "../utils/cloudinary";
 import Navbar from "../component/Navbar";
 import { useWishlist } from "../context/WishlistContext.jsx";
 import { Link } from "react-router-dom";
@@ -22,7 +23,7 @@ export default function Wishlist() {
               <div key={b.id} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
                 <div className="aspect-video bg-gray-100 overflow-hidden">
                   <img
-                    src={b.image}
+                    src={getCloudinaryUrl(b.image)}
                     alt={b.location}
                     className="w-full h-full object-cover"
                     onError={(e) => {

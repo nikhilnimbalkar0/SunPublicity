@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Monitor, Building2, Landmark, Bus, Globe2, Plane } from "lucide-react";
 import { SIZES, CATEGORIES } from "../data/adsData";
 import { firestore } from "../firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc } from "firebase/firestore";
 
 const iconMap = {
   "Downtown Billboard": Monitor,
@@ -33,14 +33,30 @@ export default function AdDashboard() {
         setLoading(true);
         setError(null);
 
-        const colRef = collection(firestore, "hoardings");
-        const snapshot = await getDocs(colRef);
-        const list = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        // Fetch from all category sub-collections
+        const CATEGORIES = [
+          "Auto Promotion",
+          "Digital Board",
+          "Hording",
+          "Shop light and without light boards",
+          "Van Promotions",
+          "Wall Paintings"
+        ];
 
-        setAllItems(list);
+        const allHoardings = [];
+
+        for (const categoryName of CATEGORIES) {
+          const categoryDocRef = doc(firestore, "categories", categoryName);
+          const colRef = collection(categoryDocRef, "hoardings");
+          const snapshot = await getDocs(colRef);
+          const list = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          allHoardings.push(...list);
+        }
+
+        setAllItems(allHoardings);
       } catch (err) {
         setError(err.message || "Failed to load ad spaces");
         setAllItems([]);
@@ -103,11 +119,10 @@ export default function AdDashboard() {
               <button
                 key={cat}
                 onClick={() => onTabClick(cat)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition text-sm ${
-                  isActive
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-700 border-gray-200 hover:border-blue-300"
-                }`}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition text-sm ${isActive
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-700 border-gray-200 hover:border-blue-300"
+                  }`}
               >
                 <Icon size={16} />
                 <span>{cat}</span>
@@ -202,9 +217,8 @@ export default function AdDashboard() {
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-gray-900 line-clamp-1">{b.location}</h3>
                   <span
-                    className={`text-xs font-medium px-2 py-1 rounded-full ${
-                      b.available ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                    }`}
+                    className={`text-xs font-medium px-2 py-1 rounded-full ${b.available ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                      }`}
                   >
                     {b.available ? "Available" : "Not Available"}
                   </span>
