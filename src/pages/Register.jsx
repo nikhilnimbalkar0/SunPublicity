@@ -21,7 +21,16 @@ export default function Register() {
       const item = location.state?.item;
       navigate(from, item ? { state: { item } } : undefined);
     } catch (e) {
-      setError("Registration failed. Please try again.");
+      console.error("Registration Error:", e);
+      if (e.code === "auth/email-already-in-use") {
+        setError("Email is already in use. Please login instead.");
+      } else if (e.code === "auth/weak-password") {
+        setError("Password should be at least 6 characters.");
+      } else if (e.code === "auth/invalid-email") {
+        setError("Please enter a valid email address.");
+      } else {
+        setError(e.message || "Registration failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -33,11 +42,17 @@ export default function Register() {
       <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <form onSubmit={onSubmit} className="w-full max-w-md bg-white p-6 rounded-xl shadow">
           <h1 className="text-2xl font-bold mb-4">Register</h1>
-          {error && <div className="mb-3 text-sm text-red-600">{error}</div>}
+
+          {error && (
+            <div className="mb-3 text-sm p-3 rounded-md bg-red-50 border border-red-200 text-red-600">
+              {error}
+            </div>
+          )}
+
           <div className="space-y-3">
             <input
               type="text"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
               placeholder="Full Name"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -45,7 +60,7 @@ export default function Register() {
             />
             <input
               type="email"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
               placeholder="Email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -53,18 +68,24 @@ export default function Register() {
             />
             <input
               type="password"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
               placeholder="Password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               required
             />
           </div>
-          <button type="submit" disabled={loading} className="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 rounded-lg">
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition duration-200 disabled:opacity-70"
+          >
             {loading ? "Registering..." : "Register"}
           </button>
-          <p className="text-sm text-gray-600 mt-4">
-            Already have an account? <Link to="/login" className="text-blue-600">Login</Link>
+
+          <p className="text-sm text-center text-gray-600 mt-4">
+            Already have an account? <Link to="/login" className="text-blue-600 font-medium hover:underline">Login</Link>
           </p>
         </form>
       </main>

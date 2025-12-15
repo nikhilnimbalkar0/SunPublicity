@@ -1,43 +1,61 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { auth } from "../firebase";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  updateProfile,
+} from "firebase/auth";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    try {
-      const raw = localStorage.getItem("auth_user");
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      if (user) localStorage.setItem("auth_user", JSON.stringify(user));
-      else localStorage.removeItem("auth_user");
-    } catch {}
-  }, [user]);
-
-  const register = useCallback(async ({ name, email, password }) => {
-    // Mock register: in real life call API
-    const newUser = { id: Date.now(), name, email };
-    setUser(newUser);
-    return newUser;
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
-  const login = useCallback(async ({ email, password }) => {
-    // Mock login: accept any credentials for demo
-    const existing = { id: 1, name: email.split("@")[0] || "User", email };
-    setUser(existing);
-    return existing;
-  }, []);
+  const register = async ({ name, email, password }) => {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    // Update display name
+    await updateProfile(userCredential.user, {
+      displayName: name,
+    });
+    // Force refresh user to get updated display name
+    setUser({ ...userCredential.user, displayName: name });
+    return userCredential.user;
+  };
 
-  const logout = useCallback(() => setUser(null), []);
+  const login = async ({ email, password }) => {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    return userCredential.user;
+  };
 
-  const value = useMemo(() => ({ user, isAuthenticated: !!user, register, login, logout }), [user, register, login, logout]);
+  const logout = () => {
+    return signOut(auth);
+  };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  const value = {
+    user,
+    isAuthenticated: !!user,
+    register,
+    login,
+    logout,
+    loading,
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
