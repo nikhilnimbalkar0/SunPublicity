@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import Navbar from "../component/Navbar";
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from "@react-google-maps/api";
 import { firestore } from "../firebase";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, doc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 
 export default function ViewMap() {
@@ -56,47 +56,108 @@ export default function ViewMap() {
 
   useEffect(() => {
     setLoadingData(true);
-    // Listen to the updated Firestore collection: "hordinglocation"
-    const colRef = collection(firestore, "hordinglocation");
-    const unsub = onSnapshot(
-      colRef,
-      (snapshot) => {
-        const docs = snapshot.docs
-          .map((doc) => {
-            const data = doc.data();
 
-            // Firestore collection: "hordinglocation"
-            // Fields: latitude, longitude, Available, imageUrl, locationAddress, name, price
-            const lat = data.latitude;
-            const lng = data.longitude;
+    // All category names in Firebase
+    const CATEGORIES = [
+      "Auto Promotion",
+      "Digital Board",
+      "Hording",
+      "Shop light and without light boards",
+      "Van Promotions",
+      "Wall Paintings"
+    ];
 
-            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    // Array to store all unsubscribe functions
+    const unsubscribers = [];
 
-            const hoarding = {
-              id: doc.id,
-              name: data.name || "",
-              lat,
-              lng,
-              price: data.price || "",
-              imageUrl: data.imageUrl || "",
-              locationAddress: data.locationAddress || "",
-              available: data.Available === true,
-            };
-            return hoarding;
-          })
-          .filter(Boolean);
-        setHoardings(docs);
-        setError(null);
-        setLoadingData(false);
-      },
-      (err) => {
-        console.error("[ViewMap] Firestore error", err);
-        setError(err.message || "Failed to load hoardings");
-        setHoardings([]);
-        setLoadingData(false);
-      }
-    );
-    return () => unsub();
+    // Subscribe to each category's hoardings subcollection
+    CATEGORIES.forEach((categoryName) => {
+      const categoryDocRef = doc(firestore, "categories", categoryName);
+      const colRef = collection(categoryDocRef, "hoardings");
+
+      const unsub = onSnapshot(
+        colRef,
+        (snapshot) => {
+          console.log(`[ViewMap] Received update for category: ${categoryName}, docs count: ${snapshot.docs.length}`);
+
+          const docs = snapshot.docs
+            .map((doc) => {
+              const data = doc.data();
+
+              // Debug: Log the raw data to see field names
+              console.log(`[ViewMap] Document ${doc.id} data:`, {
+                latitude: data.latitude,
+                longitude: data.longitude,
+                available: data.available,
+                Available: data.Available,
+                availability: data.availability,
+                category: data.category,
+                location: data.location
+              });
+
+              // Fields: latitude (string), longitude (string), available, imageUrl, location, category, price
+              const lat = parseFloat(data.latitude);
+              const lng = parseFloat(data.longitude);
+
+              if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+              // Check multiple possible field names for availability
+              let isAvailable = false;
+              if (data.available !== undefined) {
+                isAvailable = data.available === true || data.available === "true";
+              } else if (data.Available !== undefined) {
+                isAvailable = data.Available === true || data.Available === "true";
+              } else if (data.availability !== undefined) {
+                isAvailable = data.availability === true || data.availability === "true";
+              }
+
+              const hoarding = {
+                id: doc.id,
+                name: data.category || categoryName,
+                categoryName: categoryName, // Store which category this came from
+                lat,
+                lng,
+                price: data.price || "",
+                imageUrl: data.imageUrl || "",
+                locationAddress: data.location || "",
+                available: isAvailable,
+              };
+
+              console.log(`[ViewMap] Processed hoarding ${doc.id}:`, {
+                name: hoarding.name,
+                available: hoarding.available,
+                location: hoarding.locationAddress
+              });
+
+              return hoarding;
+            })
+            .filter(Boolean);
+
+          // Use setState callback to access latest state and avoid stale closures
+          setHoardings((prevHoardings) => {
+            // Remove old entries from this category
+            const filtered = prevHoardings.filter(h => h.categoryName !== categoryName);
+            // Add new entries from this category
+            return [...filtered, ...docs];
+          });
+
+          setError(null);
+          setLoadingData(false);
+        },
+        (err) => {
+          console.error(`[ViewMap] Firestore error for category ${categoryName}`, err);
+          // Don't set error for individual category failures
+          setLoadingData(false);
+        }
+      );
+
+      unsubscribers.push(unsub);
+    });
+
+    // Cleanup function to unsubscribe from all listeners
+    return () => {
+      unsubscribers.forEach(unsub => unsub());
+    };
   }, []);
 
   const markers = useMemo(

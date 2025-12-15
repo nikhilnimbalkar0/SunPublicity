@@ -7,7 +7,7 @@ import { useWishlist } from "../context/WishlistContext.jsx";
 import { Heart } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { firestore } from "../firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc } from "firebase/firestore";
 
 const LED_CATEGORY = "City Center LED";
 
@@ -28,18 +28,16 @@ export default function CityCenterLEDDashboard() {
         setLoading(true);
         setError(null);
 
-        const colRef = collection(firestore, "hoardings");
+        // Fetch from category sub-collection
+        const categoryDocRef = doc(firestore, "categories", "Digital Board");
+        const colRef = collection(categoryDocRef, "hoardings");
         const snapshot = await getDocs(colRef);
         const list = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
 
-        const filteredByCategory = list.filter(
-          (item) => item.category === LED_CATEGORY
-        );
-
-        setItems(filteredByCategory);
+        setItems(list);
       } catch (err) {
         setError(err.message || "Failed to load LED hoardings");
         setItems([]);
@@ -168,9 +166,8 @@ export default function CityCenterLEDDashboard() {
                     <MapPin size={16} className="text-gray-500" /> {b.location}
                   </h3>
                   <span
-                    className={`text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 ${
-                      b.available ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                    }`}
+                    className={`text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 ${b.available ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                      }`}
                   >
                     <Circle size={10} fill={b.available ? "#15803d" : "#b91c1c"} className={b.available ? "text-green-700" : "text-red-700"} />
                     {b.available ? "Available" : "Not Available"}

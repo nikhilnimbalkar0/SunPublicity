@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getCloudinaryUrl } from "../utils/cloudinary";
 import { useParams, Link } from "react-router-dom";
 import Navbar from "../component/Navbar";
 import { firestore } from "../firebase";
@@ -91,7 +92,7 @@ export default function AdItemDetails() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="aspect-video bg-gray-100">
             <img
-              src={item.image}
+              src={getCloudinaryUrl(item.image)}
               alt={item.location}
               className="w-full h-full object-cover"
               onError={(e) => {
@@ -104,7 +105,7 @@ export default function AdItemDetails() {
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2">
               <div>
                 <div className="text-xs uppercase text-gray-500">Size</div>
-                <div className="font-semibold">{String(item.size).replace("x","ft x ")}ft</div>
+                <div className="font-semibold">{String(item.size).replace("x", "ft x ")}ft</div>
               </div>
               <div>
                 <div className="text-xs uppercase text-gray-500">Price</div>

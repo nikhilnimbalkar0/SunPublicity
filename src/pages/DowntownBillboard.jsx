@@ -5,7 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useWishlist } from "../context/WishlistContext.jsx";
 import { Heart } from "lucide-react";
 import { firestore } from "../firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc } from "firebase/firestore";
 export default function DowntownBillboard() {
   const navigate = useNavigate();
   const CATEGORY = "Downtown Billboard";
@@ -24,27 +24,16 @@ export default function DowntownBillboard() {
         setLoading(true);
         setError(null);
 
-        const colRef = collection(firestore, "hoardings");
+        // Fetch from category sub-collection
+        const categoryDocRef = doc(firestore, "categories", "Auto Promotion");
+        const colRef = collection(categoryDocRef, "hoardings");
         const snapshot = await getDocs(colRef);
         const list = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
 
-        const filteredByCategory = list.filter(
-          (item) => item.category === CATEGORY
-        );
-
-        const finalList =
-          filteredByCategory.length > 0 ? filteredByCategory : list;
-
-        finalList.sort((a, b) => {
-          if (a.category < b.category) return -1;
-          if (a.category > b.category) return 1;
-          return 0;
-        });
-
-        setData(finalList);
+        setData(list);
       } catch (err) {
         console.error("[Downtown][FS] Error loading hoardings:", err);
         setError(err.message || "Failed to load billboards");
@@ -171,9 +160,8 @@ export default function DowntownBillboard() {
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-gray-900 line-clamp-1">{b.location}</h3>
                   <span
-                    className={`text-xs font-medium px-2 py-1 rounded-full ${
-                      b.available ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                    }`}
+                    className={`text-xs font-medium px-2 py-1 rounded-full ${b.available ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                      }`}
                   >
                     {b.available ? "Available" : "Not Available"}
                   </span>
