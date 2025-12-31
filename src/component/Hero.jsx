@@ -48,7 +48,6 @@ export default function Hero() {
         setIsLoading(false);
       },
       (error) => {
-        console.error("Error fetching hero data:", error);
         // Even on error, stop loading to show default data
         setIsLoading(false);
       }
@@ -100,7 +99,7 @@ export default function Hero() {
           if (el) {
             el.playbackRate = 1.0;
             // Ensure video plays smoothly
-            el.play().catch(err => console.log('Video autoplay prevented:', err));
+            el.play().catch(() => { });
           }
         }}
         className="absolute top-0 left-0 w-full h-full object-cover"
@@ -113,12 +112,12 @@ export default function Hero() {
         disablePictureInPicture
         controlsList="nodownload nofullscreen noremoteplayback"
         onLoadedData={(e) => {
-          e.target.play().catch(err => console.log('Play error:', err));
+          e.target.play().catch(() => { });
         }}
         onEnded={(e) => {
           // Ensure seamless loop by immediately restarting
           e.target.currentTime = 0;
-          e.target.play().catch(err => console.log('Loop error:', err));
+          e.target.play().catch(() => { });
         }}
         style={{
           filter: videoFilter,
@@ -136,7 +135,7 @@ export default function Hero() {
 
       <div className="absolute bottom-8 sm:bottom-10 md:bottom-12 lg:bottom-16 left-0 right-0 z-10 text-center w-full px-4">
         <a
-          href={cta.link}
+          href="#search"
           className="inline-block font-bold 
                      px-6 py-2.5 
                      sm:px-8 sm:py-3 

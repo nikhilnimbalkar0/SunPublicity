@@ -21,7 +21,6 @@ export default function Register() {
       const item = location.state?.item;
       navigate(from, item ? { state: { item } } : undefined);
     } catch (e) {
-      console.error("Registration Error:", e);
       if (e.code === "auth/email-already-in-use") {
         setError("Email is already in use. Please login instead.");
       } else if (e.code === "auth/weak-password") {

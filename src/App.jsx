@@ -1,53 +1,58 @@
 import './App.css'
 import { Routes, Route } from 'react-router-dom'
-import Home from './pages/Home'
-import DowntownBillboard from './pages/DowntownBillboard'
-import BillboardDetails from './pages/BillboardDetails'
-import HighwayDashboard from './pages/HighwayDashboard'
-import HighwayDetails from './pages/HighwayDetails'
-import ShoppingMallDashboard from './pages/ShoppingMallDashboard'
-import EventPromotionDashboard from './pages/EventPromotionDashboard'
-import CityCenterLEDDashboard from './pages/CityCenterLEDDashboard'
-import CorporateAdSpaceDashboard from './pages/CorporateAdSpaceDashboard'
-import UnipoleDashboard from './pages/UnipoleDashboard'
-import Wishlist from './pages/Wishlist'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import Booking from './pages/Booking'
-import Account from './pages/Account'
-import HoardingDashboard from './pages/HoardingDashboard'
-import AdItemDetails from './pages/AdItemDetails'
-import MapHoardings from './pages/MapHoardings'
-import ViewMap from './pages/ViewMap'
-import ContactMessagesDashboard from './pages/ContactMessagesDashboard'
+import { lazy, Suspense } from 'react'
+
+// Lazy load all route components for code splitting
+const Home = lazy(() => import('./pages/Home'))
+const AutoPromotion = lazy(() => import('./pages/AutoPromotion'))
+const DigitalBoard = lazy(() => import('./pages/DigitalBoard'))
+const Hording = lazy(() => import('./pages/Hording'))
+const ShopLightBoards = lazy(() => import('./pages/ShopLightBoards'))
+const VanPromotions = lazy(() => import('./pages/VanPromotions'))
+const WallPaintings = lazy(() => import('./pages/WallPaintings'))
+const UnipoleDashboard = lazy(() => import('./pages/UnipoleDashboard'))
+const Wishlist = lazy(() => import('./pages/Wishlist'))
+const Login = lazy(() => import('./pages/Login'))
+const Register = lazy(() => import('./pages/Register'))
+const Booking = lazy(() => import('./pages/Booking'))
+const Account = lazy(() => import('./pages/Account'))
+const AdItemDetails = lazy(() => import('./pages/AdItemDetails'))
+const MapHoardings = lazy(() => import('./pages/MapHoardings'))
+const ViewMap = lazy(() => import('./pages/ViewMap'))
+const ContactMessagesDashboard = lazy(() => import('./pages/ContactMessagesDashboard'))
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="text-center">
+      <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+      <p className="text-gray-600 font-medium">Loading...</p>
+    </div>
+  </div>
+)
 
 function App() {
-
-
   return (
-    <>
+    <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/hoardings" element={<HoardingDashboard />} />
 
         {/* Firebase category routes */}
-        <Route path="/auto-promotion" element={<DowntownBillboard />} />
-        <Route path="/digital-board" element={<CityCenterLEDDashboard />} />
-        <Route path="/hording" element={<HighwayDashboard />} />
-        <Route path="/shop-boards" element={<ShoppingMallDashboard />} />
-        <Route path="/van-promotions" element={<EventPromotionDashboard />} />
-        <Route path="/wall-paintings" element={<CorporateAdSpaceDashboard />} />
+        <Route path="/auto-promotion" element={<AutoPromotion />} />
+        <Route path="/digital-board" element={<DigitalBoard />} />
+        <Route path="/hording" element={<Hording />} />
+        <Route path="/shop-boards" element={<ShopLightBoards />} />
+        <Route path="/van-promotions" element={<VanPromotions />} />
+        <Route path="/wall-paintings" element={<WallPaintings />} />
 
         {/* Legacy routes (keep for backward compatibility) */}
-        <Route path="/downtown-billboard" element={<DowntownBillboard />} />
-        <Route path="/billboard/:id" element={<BillboardDetails />} />
+        <Route path="/downtown-billboard" element={<AutoPromotion />} />
         <Route path="/:category/:id" element={<AdItemDetails />} />
-        <Route path="/highway" element={<HighwayDashboard />} />
-        <Route path="/highway/:id" element={<HighwayDetails />} />
-        <Route path="/mall" element={<ShoppingMallDashboard />} />
-        <Route path="/event" element={<EventPromotionDashboard />} />
-        <Route path="/led" element={<CityCenterLEDDashboard />} />
-        <Route path="/corporate" element={<CorporateAdSpaceDashboard />} />
+        <Route path="/highway" element={<Hording />} />
+        <Route path="/mall" element={<ShopLightBoards />} />
+        <Route path="/event" element={<VanPromotions />} />
+        <Route path="/led" element={<DigitalBoard />} />
+        <Route path="/corporate" element={<WallPaintings />} />
         <Route path="/unipole" element={<UnipoleDashboard />} />
 
         {/* Other routes */}
@@ -60,10 +65,8 @@ function App() {
         <Route path="/account" element={<Account />} />
         <Route path="/admin/contact-messages" element={<ContactMessagesDashboard />} />
       </Routes>
-    </>
+    </Suspense>
   )
 }
 
 export default App
-
-

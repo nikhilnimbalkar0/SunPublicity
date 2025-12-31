@@ -74,11 +74,11 @@ export default function UnipoleDashboard() {
 
       <main className="min-h-screen p-6 md:p-10 max-w-7xl mx-auto">
         {/* Filters */}
-        <section className="bg-white rounded-xl shadow-md p-4 md:p-6 mb-8">
+        <section className="bg-white rounded-xl shadow-md p-4 md:p-6 mb-8 sticky-filters">
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div>
               <label className="block text-sm font-semibold mb-1">State</label>
-              <select value={state} onChange={(e) => { setState(e.target.value); setCity("All"); }} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+              <select value={state} onChange={(e) => { setState(e.target.value); setCity("All"); }} onFocus={(e) => e.target.scrollIntoView({ behavior: 'auto', block: 'nearest' })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
                 <option>All</option>
                 {STATES.map((s) => (
                   <option key={s.state}>{s.state}</option>
@@ -87,7 +87,7 @@ export default function UnipoleDashboard() {
             </div>
             <div>
               <label className="block text-sm font-semibold mb-1">City</label>
-              <select value={city} onChange={(e) => setCity(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+              <select value={city} onChange={(e) => setCity(e.target.value)} onFocus={(e) => e.target.scrollIntoView({ behavior: 'auto', block: 'nearest' })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
                 {citiesForState.map((c) => (
                   <option key={c}>{c}</option>
                 ))}
@@ -95,7 +95,7 @@ export default function UnipoleDashboard() {
             </div>
             <div>
               <label className="block text-sm font-semibold mb-1">Category</label>
-              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+              <select value={category} onChange={(e) => setCategory(e.target.value)} onFocus={(e) => e.target.scrollIntoView({ behavior: 'auto', block: 'nearest' })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
                 <option>Unipole</option>
                 <option>Monopole</option>
                 <option>All</option>
@@ -103,7 +103,7 @@ export default function UnipoleDashboard() {
             </div>
             <div>
               <label className="block text-sm font-semibold mb-1">Radius</label>
-              <select value={radius} onChange={(e) => setRadius(Number(e.target.value))} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+              <select value={radius} onChange={(e) => setRadius(Number(e.target.value))} onFocus={(e) => e.target.scrollIntoView({ behavior: 'auto', block: 'nearest' })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
                 {RADIUS_OPTIONS.map((r) => (
                   <option key={r} value={r}>{r} km</option>
                 ))}
@@ -112,7 +112,7 @@ export default function UnipoleDashboard() {
             <div>
               <label className="block text-sm font-semibold mb-1">Cost From</label>
               <div className="flex items-center gap-3">
-                <input type="range" min={minPrice} max={maxPrice} value={priceFrom} onChange={(e) => setPriceFrom(Number(e.target.value))} className="w-full" />
+                <input type="range" min={minPrice} max={maxPrice} value={priceFrom} onChange={(e) => setPriceFrom(Number(e.target.value))} onFocus={(e) => e.target.scrollIntoView({ behavior: 'auto', block: 'nearest' })} className="w-full" />
                 <div className="text-sm font-semibold whitespace-nowrap">₹{priceFrom.toLocaleString()}</div>
               </div>
             </div>
@@ -128,7 +128,7 @@ export default function UnipoleDashboard() {
         {/* Grid */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filtered.map((b) => (
-            <motion.div key={b.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -4, boxShadow: "0 10px 25px rgba(0,0,0,0.10)" }} transition={{ type: "spring", stiffness: 220, damping: 18 }} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+            <motion.div key={b.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} whileHover={{ y: -4, boxShadow: "0 10px 25px rgba(0,0,0,0.10)" }} transition={{ type: "spring", stiffness: 220, damping: 18 }} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
               <div className="aspect-video bg-gray-100">
                 <img src={getCloudinaryUrl(b.imageURL)} alt={b.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/800x450?text=Unipole"; }} />
               </div>
