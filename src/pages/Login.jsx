@@ -43,7 +43,6 @@ export default function Login() {
       const item = location.state?.item;
       navigate(from, item ? { state: { item } } : undefined);
     } catch (e) {
-      console.error("Login Error:", e);
       setError(getErrorMessage(e));
     } finally {
       setLoading(false);
@@ -59,8 +58,8 @@ export default function Login() {
 
           {error && (
             <div className={`mb-3 text-sm p-3 rounded-md border ${error.includes("sign up")
-                ? "bg-yellow-50 border-yellow-200 text-yellow-800"
-                : "bg-red-50 border-red-200 text-red-600"
+              ? "bg-yellow-50 border-yellow-200 text-yellow-800"
+              : "bg-red-50 border-red-200 text-red-600"
               }`}>
               {error}
             </div>

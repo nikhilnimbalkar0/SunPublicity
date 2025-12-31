@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Heart } from "lucide-react";
 import { useWishlist } from "../context/WishlistContext.jsx";
@@ -6,10 +6,32 @@ import { useAuth } from "../context/AuthContext.jsx";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
   const navigate = useNavigate();
   const location = useLocation();
   const { count } = useWishlist();
   const { isAuthenticated } = useAuth();
+
+  // Handle scroll to hide/show navbar
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      // Hide navbar when scrolling down, show when scrolling up
+      if (currentScrollY > lastScrollY && currentScrollY > 80) {
+        setHidden(true); // Scrolling down - hide navbar
+      } else {
+        setHidden(false); // Scrolling up - show navbar
+      }
+
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
 
   const scrollToId = (id) => {
     const el = document.getElementById(id);
@@ -33,10 +55,24 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white shadow-md fixed w-full top-0 left-0 z-50">
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <nav className={`bg-white shadow-md fixed w-full top-0 left-0 z-50 transition-transform duration-300 ${hidden ? '-translate-y-full' : 'translate-y-0'
+      }`}>
+      <div className="max-w-7xl mx-auto px-6 py-2 flex items-center justify-between">
         {/* Logo */}
-        <h1 className="text-2xl font-bold text-yellow-600">SunPublicity</h1>
+        <button
+          onClick={() => goHomeAndMaybeScroll()}
+          className="flex items-center gap-0 hover:opacity-80 transition-opacity"
+          aria-label="Sun Publicity Home"
+        >
+          <img
+            src="/sunlogo2.png"
+            alt="Sun Publicity Logo"
+            className="h-12 w-auto md:h-14 object-contain"
+          />
+          <span className="text-base md:text-lg font-bold text-yellow-600 hidden sm:inline">
+            SunPublicity
+          </span>
+        </button>
 
         {/* Desktop Menu */}
         <ul className="hidden md:flex space-x-8 text-gray-700 font-medium items-center">

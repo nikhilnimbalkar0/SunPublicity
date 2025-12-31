@@ -31,7 +31,7 @@ export default function ContactSection({
         createdAt: serverTimestamp(),
       });
     } catch (error) {
-      console.error("Failed to save contact message:", error);
+      // Silently handle error - form still resets
     }
     setForm({ name: "", email: "", phone: "", message: "" });
   };
@@ -46,7 +46,7 @@ export default function ContactSection({
         <div>
           <h2 className="text-3xl font-bold mb-6">Get in Touch</h2>
           <p className="text-gray-300 mb-6">
-            Need to advertise your brand or rent a billboard?  
+            Need to advertise your brand or rent a billboard?
             We’re here to help you find the best spot for maximum visibility.
           </p>
 
