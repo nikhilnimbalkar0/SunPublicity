@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { Globe2, Monitor, Landmark, Bus, Building2, Plane } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { collection, getDocs, doc, onSnapshot } from "firebase/firestore";
 import { firestore } from "../firebase";
+import { normalizeHoardingData } from "../utils/normalizeAvailability";
+import { getCloudinaryUrl } from "../utils/cloudinary";
 
 export default function SearchSection() {
   const navigate = useNavigate();
@@ -13,338 +15,237 @@ export default function SearchSection() {
   const [firestoreCategories, setFirestoreCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
 
-  useEffect(() => {
-    const t = setTimeout(() => setMounted(true), 50);
-    return () => clearTimeout(t);
-  }, []);
-
-  // Static categories (always visible)
-  const staticCategories = [
-    {
-      name: "Auto Promotion",
-      firestoreName: "Auto Promotion",
-      icon: <Monitor size={36} />,
-      route: "/auto-promotion"
-    },
-    {
-      name: "Digital Board",
-      firestoreName: "Digital Board",
-      icon: <Building2 size={36} />,
-      route: "/digital-board"
-    },
-    {
-      name: "Hording",
-      firestoreName: "Hording",
-      icon: <Landmark size={36} />,
-      route: "/hording"
-    },
-    {
-      name: "Shop Light Boards",
-      firestoreName: "Shop light and without light boards",
-      icon: <Bus size={36} />,
-      route: "/shop-boards"
-    },
-    {
-      name: "Van Promotions",
-      firestoreName: "Van Promotions",
-      icon: <Globe2 size={36} />,
-      route: "/van-promotions"
-    },
-    {
-      name: "Wall Paintings",
-      firestoreName: "Wall Paintings",
-      icon: <Plane size={36} />,
-      route: "/wall-paintings"
-    },
-  ];
-
-  // Icon mapping for Firestore categories
-  const getIconComponent = (iconName) => {
-    const iconMap = {
-      "Monitor": <Monitor size={36} />,
-      "Building2": <Building2 size={36} />,
-      "Landmark": <Landmark size={36} />,
-      "Bus": <Bus size={36} />,
-      "Globe2": <Globe2 size={36} />,
-      "Plane": <Plane size={36} />,
-    };
-    return iconMap[iconName] || <Monitor size={36} />;
-  };
-
-  // Generate route from category name
-  const generateRoute = (categoryName) => {
-    return `/${categoryName.toLowerCase().replace(/\s+/g, '-')}`;
-  };
-
-  // Fetch dynamic categories from Firestore
+  // Rule 1: Use useEffect with [] for initial category load (Real-time enabled)
   useEffect(() => {
     setCategoriesLoading(true);
-
     const categoriesRef = collection(firestore, "categories");
 
-    const unsubscribe = onSnapshot(
-      categoriesRef,
-      (snapshot) => {
-        const fetchedCategories = snapshot.docs
-          .map((docSnap) => ({
-            name: docSnap.data().name,
-            firestoreName: docSnap.id,
-            icon: getIconComponent(docSnap.data().icon),
-            route: generateRoute(docSnap.data().name),
-            order: docSnap.data().order || 999,
-            active: docSnap.data().active
-          }))
-          .filter(cat => cat.active === true);
+    const unsubscribe = onSnapshot(categoriesRef, (snapshot) => {
+      const fetched = snapshot.docs
+        .map(docSnap => ({
+          id: docSnap.id,
+          name: docSnap.data().name || docSnap.id,
+          icon: docSnap.data().icon || "Monitor",
+          active: docSnap.data().active ?? true,
+          order: docSnap.data().order || 0
+        }))
+        .filter(cat => cat.active)
+        .sort((a, b) => a.order - b.order);
 
-        setFirestoreCategories(fetchedCategories);
-        setCategoriesLoading(false);
-        console.log(`✅ Loaded ${fetchedCategories.length} dynamic categories from Firestore`);
-      },
-      (error) => {
-        console.error("❌ Error fetching Firestore categories:", error);
-        setCategoriesLoading(false);
-      }
-    );
+      setFirestoreCategories(fetched);
+      setCategoriesLoading(false);
+    }, (error) => {
+      console.error("❌ Error listening to categories:", error);
+      setCategoriesLoading(false);
+    });
 
-    return () => unsubscribe();
+    // Animation trigger
+    const t = setTimeout(() => setMounted(true), 50);
+
+    return () => {
+      unsubscribe();
+      clearTimeout(t);
+    };
   }, []);
 
-  // Merge static + dynamic categories (avoid duplicates)
-  const categories = [
-    ...staticCategories,
-    ...firestoreCategories.filter(
-      (fCat) => !staticCategories.some((sCat) => sCat.firestoreName === fCat.firestoreName)
-    )
-  ];
+  // Rule 2 & 3: Load hoardings for the clicked category (Real-time enabled)
+  useEffect(() => {
+    if (!selectedCategory) {
+      setHoardings([]);
+      return;
+    }
 
-  // Fetch hoardings for a specific category ONLY when clicked
-  const handleCategoryClick = async (category) => {
-    try {
-      setLoading(true);
-      setSelectedCategory(category);
-      setHoardings([]); // Clear previous data
+    // Rule 3: Clean state every time category changes
+    setHoardings([]);
+    setLoading(true);
 
-      // Fetch ONLY from the selected category
-      const categoryDocRef = doc(firestore, "categories", category.firestoreName);
-      const hoardingsColRef = collection(categoryDocRef, "hoardings");
-      const snapshot = await getDocs(hoardingsColRef);
+    const categoryDocRef = doc(firestore, "categories", selectedCategory.id);
+    const hoardingsColRef = collection(categoryDocRef, "hoardings");
 
-      const fetchedHoardings = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-        available: docSnap.data().available === true || docSnap.data().availability === true,
-      }));
+    const unsubscribe = onSnapshot(hoardingsColRef, (snapshot) => {
+      const fetchedHoardings = snapshot.docs.map((docSnap) =>
+        normalizeHoardingData(docSnap.data(), docSnap.id, selectedCategory.name)
+      );
 
       setHoardings(fetchedHoardings);
-      console.log(`Loaded ${fetchedHoardings.length} hoardings from ${category.name}`);
-    } catch (error) {
-      console.error("Error fetching hoardings:", error);
-      setHoardings([]);
-    } finally {
       setLoading(false);
+      console.log(`✅ Real-time update: ${fetchedHoardings.length} hoardings for ${selectedCategory.name}`);
+    }, (error) => {
+      console.error("❌ Error listening to hoardings:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [selectedCategory]);
+
+  const handleCategoryClick = (category) => {
+    if (selectedCategory?.id === category.id) return;
+    setSelectedCategory(category);
+  };
+
+  // Helper for dynamic icons based on Firestore string
+  const getIcon = (iconName) => {
+    switch (iconName) {
+      case "Monitor": return <Monitor size={36} />;
+      case "Building2": return <Building2 size={36} />;
+      case "Landmark": return <Landmark size={36} />;
+      case "Bus": return <Bus size={36} />;
+      case "Globe2": return <Globe2 size={36} />;
+      case "Plane": return <Plane size={36} />;
+      default: return <Landmark size={36} />;
     }
   };
 
-  const availableCount = hoardings.filter(h => h.available).length;
+  const availableCount = useMemo(() => hoardings.filter(h => h.available).length, [hoardings]);
 
   return (
     <section id="search" className="w-full bg-gray-50 py-16">
       <div className="max-w-7xl mx-auto px-6">
-        {/* Title */}
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-gray-900">
-          Search Outdoor Media By Category
-        </h2>
-
-        <p className="text-center text-gray-600 mb-12">
-          Select a category below to view available hoardings
-        </p>
-
-        {/* Category Icons Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 mb-12">
-          {categories.map((category, index) => (
-            <div
-              key={category.name}
-              className={`group relative flex flex-col items-center justify-center text-center space-y-3 rounded-2xl p-6 backdrop-blur transition-all duration-500 ease-out cursor-pointer ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                } ${selectedCategory?.name === category.name
-                  ? 'bg-blue-600 text-white shadow-xl scale-105'
-                  : 'bg-white border border-gray-200 hover:border-blue-300 hover:shadow-lg hover:scale-105'
-                }`}
-              style={{ transitionDelay: `${index * 75}ms` }}
-              onClick={() => handleCategoryClick(category)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleCategoryClick(category);
-                }
-              }}
-            >
-              <div className={`p-4 rounded-full transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110 ${selectedCategory?.name === category.name
-                ? 'bg-white/20'
-                : 'bg-blue-50'
-                }`}>
-                <div className={selectedCategory?.name === category.name ? 'text-white' : 'text-blue-600'}>
-                  {category.icon}
-                </div>
-              </div>
-              <p className={`text-sm md:text-base font-semibold transition-colors duration-300 ${selectedCategory?.name === category.name ? 'text-white' : 'text-gray-900'
-                }`}>
-                {category.name}
-              </p>
-            </div>
-          ))}
+        {/* Section Header */}
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            Search Outdoor Media By Category
+          </h2>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Select a category from the live database to view and map the best hoarding locations.
+          </p>
         </div>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="text-center text-gray-500 py-10">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-            <p>Loading hoardings...</p>
-          </div>
-        )}
-
-        {/* No Category Selected */}
-        {!loading && !selectedCategory && (
-          <div className="text-center py-16 bg-white rounded-xl border-2 border-dashed border-gray-300">
-            <div className="text-6xl mb-4">🏢</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              Please select a category to view hoardings
-            </h3>
-            <p className="text-gray-600">
-              Click on any category icon above to browse available hoardings
-            </p>
-          </div>
-        )}
-
-        {/* Selected Category Hoardings */}
-        {!loading && selectedCategory && (
-          <div>
-            {/* Category Header */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <div className="flex items-center gap-4">
-                <div className="bg-blue-50 p-4 rounded-full">
-                  <div className="text-blue-600">
-                    {selectedCategory.icon}
+        {/* Dynamic Categories Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 mb-12">
+          {categoriesLoading ? (
+            // Simple Skeleton for categories
+            [...Array(6)].map((_, i) => (
+              <div key={i} className="h-40 bg-gray-200 animate-pulse rounded-2xl" />
+            ))
+          ) : (
+            firestoreCategories.map((category, index) => (
+              <div
+                key={category.id}
+                className={`group relative flex flex-col items-center justify-center text-center space-y-3 rounded-2xl p-6 backdrop-blur transition-all duration-500 ease-out cursor-pointer ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                  } ${selectedCategory?.id === category.id
+                    ? 'bg-blue-600 text-white shadow-xl scale-105'
+                    : 'bg-white border border-gray-200 hover:border-blue-300 hover:shadow-lg hover:scale-105'
+                  }`}
+                style={{ transitionDelay: `${index * 75}ms` }}
+                onClick={() => handleCategoryClick(category)}
+                role="button"
+                tabIndex={0}
+              >
+                <div className={`p-4 rounded-full transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110 ${selectedCategory?.id === category.id ? 'bg-white/20' : 'bg-blue-50'
+                  }`}>
+                  <div className={selectedCategory?.id === category.id ? 'text-white' : 'text-blue-600'}>
+                    {getIcon(category.icon)}
                   </div>
                 </div>
+                <p className={`text-sm md:text-base font-semibold transition-colors duration-300 ${selectedCategory?.id === category.id ? 'text-white' : 'text-gray-900'
+                  }`}>
+                  {category.name}
+                </p>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Categories Results View */}
+        {!loading && selectedCategory && (
+          <div className="space-y-8 animate-in fade-in duration-500">
+            {/* 1. Category Status Bar */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+              <div className="flex items-center gap-4">
+                <div className="bg-blue-50 p-4 rounded-full text-blue-600">
+                  {getIcon(selectedCategory.icon)}
+                </div>
                 <div>
-                  <h3 className="text-2xl md:text-3xl font-bold text-gray-900">
-                    {selectedCategory.name}
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Browse available hoardings in this category
-                  </p>
+                  <h3 className="text-2xl font-bold text-gray-900">{selectedCategory.name}</h3>
+                  <div className="flex items-center gap-3">
+                    <p className="text-sm text-gray-500">Showing all media in this category</p>
+                    <button
+                      onClick={() => navigate(`/view-map?category=${selectedCategory.id}`)}
+                      className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
+                    >
+                      <Globe2 size={14} />
+                      View All on Map
+                    </button>
+                  </div>
                 </div>
               </div>
-
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-8 px-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600">{availableCount}</div>
-                  <div className="text-xs text-gray-500">Available</div>
+                  <div className="text-xs text-gray-400 font-medium uppercase">Available</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-gray-900">{hoardings.length}</div>
-                  <div className="text-xs text-gray-500">Total</div>
+                  <div className="text-xs text-gray-400 font-medium uppercase">Total</div>
                 </div>
               </div>
             </div>
 
-            {/* Hoardings Grid */}
+            {/* 2. Hoardings Cards List */}
             {hoardings.length === 0 ? (
-              <div className="text-center text-gray-500 py-12 bg-white rounded-xl">
+              <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-gray-200">
                 <div className="text-5xl mb-4">📭</div>
-                <p className="text-lg font-semibold">No hoardings found in this category</p>
+                <h3 className="text-xl font-bold text-gray-900">No media found</h3>
+                <p className="text-gray-500">This category currently has no hoardings listed in the database.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {hoardings.map((hoarding) => (
+                {hoardings.map((h) => (
                   <div
-                    key={hoarding.id}
-                    className="group bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 hover:border-blue-200 hover:shadow-lg transition-all duration-300"
+                    key={h.id}
+                    className="group bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300"
                   >
-                    {/* Image with Availability Badge */}
-                    <div className="aspect-video bg-gray-100 overflow-hidden relative">
+                    {/* Media Image */}
+                    <div className="relative aspect-[16/10] overflow-hidden bg-gray-50">
                       <img
-                        src={hoarding.image || "https://placehold.co/800x450/e5e7eb/6b7280?text=No+Image"}
-                        alt={hoarding.location || hoarding.title}
-                        className="w-full h-full object-cover transform transition-transform duration-300 ease-out group-hover:scale-105"
-                        onError={(e) => {
-                          e.currentTarget.src = "https://placehold.co/800x450/e5e7eb/6b7280?text=No+Image";
-                        }}
+                        src={getCloudinaryUrl(h.image)}
+                        alt={h.location}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={(e) => e.target.src = "https://placehold.co/800x450?text=Hoarding+Image"}
                       />
-                      <span
-                        className={`absolute top-3 right-3 text-xs font-medium px-3 py-1.5 rounded-full shadow-md ${hoarding.available
-                          ? "bg-green-500 text-white"
-                          : "bg-red-500 text-white"
-                          }`}
-                      >
-                        {hoarding.available ? "Available" : "Not Available"}
+                      <span className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold shadow-lg text-white ${h.available ? 'bg-green-500' : 'bg-red-500'
+                        }`}>
+                        {h.available ? 'AVAILABLE' : 'BOOKED'}
                       </span>
                     </div>
 
-                    {/* Hoarding Details */}
-                    <div className="p-5 space-y-3">
-                      <div>
-                        <h4 className="font-bold text-lg text-gray-900 line-clamp-1 mb-1">
-                          {hoarding.title || hoarding.location || "Hoarding"}
-                        </h4>
-                        <p className="text-sm text-gray-500">
-                          {hoarding.location || "India, Maharashtra"}
-                        </p>
-                      </div>
+                    <div className="p-6">
+                      <h4 className="text-lg font-bold text-gray-900 line-clamp-1 mb-1">
+                        {h.name || h.location || "Premium Hoarding"}
+                      </h4>
+                      <p className="text-sm text-gray-500 mb-4 line-clamp-1">{h.locationAddress || h.location}</p>
 
-                      <div className="grid grid-cols-2 gap-3 py-2 border-t border-b border-gray-100">
+                      <div className="grid grid-cols-2 gap-4 py-3 border-y border-gray-50 mb-4">
                         <div>
-                          <div className="text-xs text-gray-500 mb-1">Size</div>
-                          <div className="font-semibold text-gray-900">
-                            {hoarding.size ? `${hoarding.size.replace("x", "ft x ")}ft` : "N/A"}
-                          </div>
+                          <p className="text-xs text-gray-400 font-medium uppercase">Dimensions</p>
+                          <p className="text-sm font-bold text-gray-700">{h.size || "Standard"}</p>
                         </div>
                         <div>
-                          <div className="text-xs text-gray-500 mb-1">Price</div>
-                          <div className="font-semibold text-gray-900">
-                            {hoarding.price ? (
-                              <>
-                                {new Intl.NumberFormat("en-IN", {
-                                  style: "currency",
-                                  currency: "INR",
-                                  maximumFractionDigits: 0
-                                }).format(hoarding.price)}
-                                <span className="text-xs font-normal text-gray-500">/month</span>
-                              </>
-                            ) : "N/A"}
-                          </div>
+                          <p className="text-xs text-gray-400 font-medium uppercase">Price/mo</p>
+                          <p className="text-sm font-bold text-blue-600">
+                            {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(h.price || 0)}
+                          </p>
                         </div>
                       </div>
 
-                      {/* Action Buttons */}
-                      <div className="pt-2 flex gap-2">
+                      <div className="flex gap-2">
                         <button
-                          onClick={() => navigate(selectedCategory.route)}
-                          className="flex-1 text-center text-sm font-semibold text-blue-600 hover:text-blue-700 px-4 py-2 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                          onClick={() => {
+                            const route = selectedCategory.name.toLowerCase().replace(/\s+/g, '-');
+                            navigate(`/${route}/${h.id}`);
+                          }}
+                          className="flex-1 py-2.5 rounded-xl border-2 border-blue-600 text-blue-600 font-bold hover:bg-blue-50 transition-colors text-sm"
                         >
-                          View Details
+                          Details
                         </button>
                         <button
-                          disabled={!hoarding.available}
-                          onClick={() => navigate('/booking', {
-                            state: {
-                              item: {
-                                id: hoarding.id,
-                                location: hoarding.location || hoarding.title,
-                                size: hoarding.size,
-                                price: hoarding.price,
-                                image: hoarding.image
-                              }
-                            }
-                          })}
-                          className={`flex-1 text-sm px-4 py-2 rounded-lg font-bold transition-colors shadow-sm ${hoarding.available
-                            ? 'bg-yellow-500 hover:bg-yellow-400 text-black cursor-pointer'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          disabled={!h.available}
+                          onClick={() => navigate('/booking', { state: { item: h } })}
+                          className={`flex-2 py-2.5 px-6 rounded-xl font-bold text-sm shadow-sm transition-all ${h.available ? 'bg-yellow-500 hover:bg-yellow-400 text-black' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                             }`}
                         >
-                          {hoarding.available ? "Book Now" : "Unavailable"}
+                          Book Now
                         </button>
                       </div>
                     </div>
@@ -352,6 +253,17 @@ export default function SearchSection() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Initial Empty State */}
+        {!loading && !selectedCategory && !categoriesLoading && (
+          <div className="py-20 text-center bg-white rounded-3xl border border-gray-100 shadow-sm mt-8">
+            <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Globe2 className="text-blue-600" size={40} />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Explore Outdoor Locations</h3>
+            <p className="text-gray-500 max-w-sm mx-auto">Click any category above to fetch real-time hoardings and see them on the map.</p>
           </div>
         )}
       </div>

@@ -6,6 +6,8 @@ import { useWishlist } from "../context/WishlistContext.jsx";
 import { Heart } from "lucide-react";
 import { firestore } from "../firebase.js";
 import { collection, getDocs, doc } from "firebase/firestore";
+import { normalizeHoardingData } from "../utils/normalizeAvailability";
+import { getCloudinaryUrl } from "../utils/cloudinary";
 export default function AutoPromotion() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -27,10 +29,7 @@ export default function AutoPromotion() {
         const categoryDocRef = doc(firestore, "categories", "Auto Promotion");
         const colRef = collection(categoryDocRef, "hoardings");
         const snapshot = await getDocs(colRef);
-        const list = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const list = snapshot.docs.map((doc) => normalizeHoardingData(doc.data(), doc.id, "Auto Promotion"));
 
         setData(list);
       } catch (err) {
@@ -165,11 +164,11 @@ export default function AutoPromotion() {
             >
               <div className="aspect-video bg-gray-100 overflow-hidden relative">
                 <img
-                  src={b.image}
+                  src={getCloudinaryUrl(b.image)}
                   alt={b.location}
                   className="w-full h-full object-cover transform transition-transform duration-300 ease-out group-hover:scale-105"
                   onError={(e) => {
-                    e.currentTarget.src = "https://via.placeholder.com/800x450?text=Billboard";
+                    e.currentTarget.src = "https://placehold.co/800x450?text=Auto+Promotion";
                   }}
                 />
                 <span

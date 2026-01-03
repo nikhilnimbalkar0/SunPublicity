@@ -4,10 +4,10 @@
  * @returns {string} - The full Cloudinary URL.
  */
 export const getCloudinaryUrl = (imagePath) => {
-    if (!imagePath) return "https://via.placeholder.com/800x450?text=No+Image";
+    if (!imagePath) return "https://placehold.co/800x450?text=No+Image";
 
-    // If it's already a full URL (including blob: for local previews), return it as is
-    if (imagePath.startsWith("http") || imagePath.startsWith("blob:")) {
+    // If it's already a full URL or a local path, return it as is
+    if (imagePath.startsWith("/") || imagePath.startsWith("http") || imagePath.startsWith("blob:")) {
         return imagePath;
     }
 

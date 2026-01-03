@@ -7,6 +7,8 @@ import { Heart } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { firestore } from "../firebase";
 import { collection, getDocs, doc } from "firebase/firestore";
+import { normalizeHoardingData } from "../utils/normalizeAvailability";
+import { getCloudinaryUrl } from "../utils/cloudinary";
 
 
 export default function VanPromotions() {
@@ -30,10 +32,7 @@ export default function VanPromotions() {
         const categoryDocRef = doc(firestore, "categories", "Van Promotions");
         const colRef = collection(categoryDocRef, "hoardings");
         const snapshot = await getDocs(colRef);
-        const list = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const list = snapshot.docs.map((doc) => normalizeHoardingData(doc.data(), doc.id, "Van Promotions"));
 
         setItems(list);
       } catch (err) {
@@ -156,11 +155,11 @@ export default function VanPromotions() {
             >
               <div className="aspect-video bg-gray-100 overflow-hidden relative">
                 <img
-                  src={b.image}
+                  src={getCloudinaryUrl(b.image)}
                   alt={b.location}
                   className="w-full h-full object-cover transform transition-transform duration-300 ease-out group-hover:scale-105"
                   onError={(e) => {
-                    e.currentTarget.src = "https://via.placeholder.com/800x450?text=Van+Promotions";
+                    e.currentTarget.src = "https://placehold.co/800x450?text=Van+Promotions";
                   }}
                 />
                 <span

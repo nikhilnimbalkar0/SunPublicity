@@ -118,7 +118,7 @@ export default function Booking() {
                     alt={item.location}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.currentTarget.src = "https://via.placeholder.com/800x450?text=Hoarding"
+                      e.currentTarget.src = "https://placehold.co/800x450?text=Hoarding"
                     }}
                   />
                 </div>
