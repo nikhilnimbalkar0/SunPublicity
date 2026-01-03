@@ -75,10 +75,10 @@ export default function Account() {
         if (userProfile) {
           setProfile({
             name: userProfile.name || user.displayName || "",
-            phone: userProfile.phone || "",
+            phone: userProfile.phone || userProfile.phoneNumber || "",
             address: userProfile.address || "",
             city: userProfile.city || "",
-            profileImage: userProfile.profileImage || "",
+            profileImage: userProfile.photo || userProfile.profileImage || user.photoURL || "",
           });
         }
       } catch (error) {
