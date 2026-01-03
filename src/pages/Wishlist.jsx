@@ -4,6 +4,7 @@ import Navbar from "../component/Navbar";
 import { useWishlist } from "../context/WishlistContext.jsx";
 import { Link } from "react-router-dom";
 import { MapPin, Ruler, IndianRupee, Circle, Heart } from "lucide-react";
+import { normalizeAvailability } from "../utils/normalizeAvailability";
 
 export default function Wishlist() {
   const { items, remove } = useWishlist();
@@ -51,16 +52,14 @@ export default function Wishlist() {
                       alt={b.location}
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        e.currentTarget.src = "https://via.placeholder.com/800x450?text=Billboard";
+                        e.currentTarget.src = "https://placehold.co/800x450?text=Billboard";
                       }}
                     />
                     {/* Availability badge */}
-                    {b.available !== undefined && (
-                      <span className={`absolute top-2 right-2 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 ${b.available ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                        <Circle size={10} fill={b.available ? "#15803d" : "#b91c1c"} className={b.available ? "text-green-700" : "text-red-700"} />
-                        {b.available ? "Available" : "Not Available"}
-                      </span>
-                    )}
+                    <span className={`absolute top-2 right-2 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 ${normalizeAvailability(b) ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                      <Circle size={10} fill={normalizeAvailability(b) ? "#15803d" : "#b91c1c"} className={normalizeAvailability(b) ? "text-green-700" : "text-red-700"} />
+                      {normalizeAvailability(b) ? "Available" : "Not Available"}
+                    </span>
                   </div>
 
                   {/* Card content */}

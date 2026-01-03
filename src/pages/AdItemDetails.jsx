@@ -1,33 +1,26 @@
 import { useEffect, useState } from "react";
 import { getCloudinaryUrl } from "../utils/cloudinary";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import Navbar from "../component/Navbar";
 import { firestore } from "../firebase";
-import { doc, getDoc, collection } from "firebase/firestore";
-
-const CATEGORY_MAP = {
-  "auto-promotion": "Auto Promotion",
-  "digital-board": "Digital Board",
-  "hording": "Hording",
-  "shop-boards": "Shop light and without light boards",
-  "van-promotions": "Van Promotions",
-  "wall-paintings": "Wall Paintings",
-  // Legacy routes
-  mall: "Shopping Mall Board",
-  event: "Event Promotion",
-  led: "City Center LED",
-  corporate: "Corporate Ad Space",
-};
+import { doc, getDoc, collection, getDocs } from "firebase/firestore";
+import { useWishlist } from "../context/WishlistContext";
+import { Heart } from "lucide-react";
+import { normalizeHoardingData } from "../utils/normalizeAvailability";
 
 export default function AdItemDetails() {
   const { category, id } = useParams();
-  const key = CATEGORY_MAP[category];
+  const navigate = useNavigate();
+  const { items, toggle } = useWishlist();
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [realCategoryName, setRealCategoryName] = useState("");
+
+  const isInWishlist = items.some((i) => i.id === id);
 
   useEffect(() => {
-    if (!id || !key) {
+    if (!id || !category) {
       setLoading(false);
       setError("Invalid category or ID");
       return;
@@ -37,49 +30,72 @@ export default function AdItemDetails() {
       try {
         setLoading(true);
         setError(null);
-        setItem(null); // Clear previous data
+        setItem(null);
 
-        // Fetch from category sub-collection: categories/{categoryName}/hoardings/{id}
-        const categoryDocRef = doc(firestore, "categories", key);
+        // Dynamic Slug Resolution (No hardcoded maps)
+        let resolvedKey = null;
+
+        // Search Firestore categories to find the correct ID
+        const catsRef = collection(firestore, "categories");
+        const catsSnapshot = await getDocs(catsRef);
+
+        const targetSlug = category.toLowerCase().trim();
+
+        for (const docSnap of catsSnapshot.docs) {
+          const docId = docSnap.id;
+          const docData = docSnap.data();
+          const displayName = docData.name || docId;
+
+          const idSlug = docId.toLowerCase().replace(/\s+/g, '-');
+          const nameSlug = displayName.toLowerCase().replace(/\s+/g, '-');
+
+          if (idSlug === targetSlug || nameSlug === targetSlug) {
+            resolvedKey = docId; // Use the actual case-sensitive doc ID
+            setRealCategoryName(displayName);
+            break;
+          }
+        }
+
+        if (!resolvedKey) {
+          throw new Error(`Category "${category}" not found in database.`);
+        }
+
+        // Fetch the specific hoarding
+        const categoryDocRef = doc(firestore, "categories", resolvedKey);
         const hoardingsColRef = collection(categoryDocRef, "hoardings");
-        const hoardingDocRef = doc(hoardingsColRef, id);
-
-        const snapshot = await getDoc(hoardingDocRef);
+        const itemDocRef = doc(hoardingsColRef, id);
+        const snapshot = await getDoc(itemDocRef);
 
         if (snapshot.exists()) {
           const data = snapshot.data();
+          let processedData = normalizeHoardingData(data, id, resolvedKey);
 
-          // Handle Firestore Timestamp for expiryDate
-          let processedData = { id, ...data };
           if (data.expiryDate && typeof data.expiryDate?.toDate === 'function') {
             processedData.expiryDate = data.expiryDate.toDate().toISOString();
           }
 
           setItem(processedData);
-          setError(null);
         } else {
-          setItem(null);
-          setError("Item not found.");
+          setError(`Item not found in "${realCategoryName || resolvedKey}".`);
         }
       } catch (err) {
         console.error("Error fetching hoarding details:", err);
         setError(err.message || "Failed to load item.");
-        setItem(null);
       } finally {
         setLoading(false);
       }
     };
 
     fetchItem();
-  }, [id, key]);
+  }, [id, category]);
 
-  if (!key) {
+  if (!loading && !item) {
     return (
       <>
         <Navbar />
-        <main className="max-w-4xl mx-auto p-6 md:p-10">
-          <p className="text-gray-600">Unknown category.</p>
-          <Link to={`/${category}`} className="text-blue-600 font-semibold">← Back</Link>
+        <main className="max-w-4xl mx-auto p-6 md:p-10 text-center">
+          <p className="text-gray-600 mb-4">{error || "Item not found."}</p>
+          <Link to="/" className="text-blue-600 font-semibold underline">← Back to Home</Link>
         </main>
       </>
     );
@@ -90,19 +106,7 @@ export default function AdItemDetails() {
       <>
         <Navbar />
         <main className="max-w-4xl mx-auto p-6 md:p-10">
-          <p className="text-gray-600">Loading hoarding...</p>
-        </main>
-      </>
-    );
-  }
-
-  if (!item) {
-    return (
-      <>
-        <Navbar />
-        <main className="max-w-4xl mx_auto p-6 md:p-10">
-          <p className="text-gray-600">{error || "Item not found."}</p>
-          <Link to={`/${category}`} className="text-blue-600 font-semibold">← Back to {key}</Link>
+          <p className="text-gray-600">Loading details...</p>
         </main>
       </>
     );
@@ -116,7 +120,7 @@ export default function AdItemDetails() {
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Back to {key}
+          Back to {realCategoryName || category}
         </Link>
 
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
@@ -128,7 +132,7 @@ export default function AdItemDetails() {
                 alt={item.location}
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  e.currentTarget.src = "https://via.placeholder.com/800x800?text=Hoarding";
+                  e.currentTarget.src = "https://placehold.co/800x800?text=Hoarding";
                 }}
               />
               <span
@@ -182,16 +186,25 @@ export default function AdItemDetails() {
               <div className="space-y-3 pt-6 border-t border-gray-200">
                 <button
                   onClick={() => {
-                    // Navigate to booking page with item details
-                    window.location.href = `/booking?item=${encodeURIComponent(JSON.stringify({ id: item.id, location: item.location, size: item.size, price: item.price, image: item.image }))}`;
+                    navigate('/booking', {
+                      state: {
+                        item: {
+                          id: item.id,
+                          location: item.location,
+                          size: item.size,
+                          price: item.price,
+                          image: item.image
+                        }
+                      }
+                    });
                   }}
-                  className="w-full py-4 px-6 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl transition-colors shadow-md hover:shadow-lg text-lg"
+                  className="w-full py-4 px-6 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl transition-colors shadow-md hover:shadow-lg text-lg flex items-center justify-center gap-2"
                 >
                   Book Now
                 </button>
                 <div className="grid grid-cols-2 gap-3">
                   <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}`}
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`India, Maharashtra, ${item.location}`)}`}
                     target="_blank"
                     rel="noreferrer"
                     className="py-3 px-4 bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-700 font-semibold rounded-xl transition-colors text-center"
@@ -199,11 +212,20 @@ export default function AdItemDetails() {
                     View on Map
                   </a>
                   <button
-                    className="py-3 px-4 bg-white border-2 border-pink-300 hover:border-pink-400 text-pink-600 font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+                    onClick={() => toggle({
+                      id: item.id,
+                      location: item.location,
+                      size: item.size,
+                      price: item.price,
+                      image: item.image,
+                      href: `/${category}/${item.id}`
+                    })}
+                    className={`py-3 px-4 rounded-xl border-2 transition-colors flex items-center justify-center gap-2 font-semibold ${isInWishlist
+                      ? 'bg-pink-50 border-pink-300 text-pink-600'
+                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                      }`}
                   >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                    </svg>
+                    <Heart size={20} className={isInWishlist ? "fill-pink-600" : ""} />
                     Wishlist
                   </button>
                 </div>

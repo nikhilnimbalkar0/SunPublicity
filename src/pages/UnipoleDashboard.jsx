@@ -130,7 +130,7 @@ export default function UnipoleDashboard() {
           {filtered.map((b) => (
             <motion.div key={b.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} whileHover={{ y: -4, boxShadow: "0 10px 25px rgba(0,0,0,0.10)" }} transition={{ type: "spring", stiffness: 220, damping: 18 }} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
               <div className="aspect-video bg-gray-100">
-                <img src={getCloudinaryUrl(b.imageURL)} alt={b.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/800x450?text=Unipole"; }} />
+                <img src={getCloudinaryUrl(b.imageURL)} alt={b.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = "https://placehold.co/800x450?text=Unipole"; }} />
               </div>
               <div className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
@@ -181,7 +181,7 @@ export default function UnipoleDashboard() {
             <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="relative z-[61] w-[95%] max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden">
               <div className="grid md:grid-cols-2">
                 <div className="bg-gray-100">
-                  <img src={getCloudinaryUrl(active.imageURL)} alt={active.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/800x600?text=Unipole"; }} />
+                  <img src={getCloudinaryUrl(active.imageURL)} alt={active.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = "https://placehold.co/800x600?text=Unipole"; }} />
                 </div>
                 <div className="p-5 space-y-3">
                   <h3 className="text-xl font-bold flex items-center gap-2"><Building2 size={18} className="text-gray-500" /> {active.name}</h3>

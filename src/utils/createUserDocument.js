@@ -16,34 +16,74 @@ export async function createUserDocument(firebaseUser) {
 
     try {
         const userDocRef = doc(firestore, "users", firebaseUser.uid);
-
-        // Check if document already exists
         const userDoc = await getDoc(userDocRef);
 
         if (userDoc.exists()) {
-            // User document already exists, don't overwrite
-            console.log("User document already exists for:", firebaseUser.uid);
             return false;
         }
 
-        // Create new user document
         const userData = {
             name: firebaseUser.displayName || "",
             email: firebaseUser.email || "",
             phone: "",
             address: "",
             city: "",
-            profileImage: "",
+            profileImage: firebaseUser.photoURL || "",
             role: "customer",
             createdAt: serverTimestamp(),
+            lastLoginAt: serverTimestamp(),
+            uid: firebaseUser.uid,
         };
 
         await setDoc(userDocRef, userData);
-        console.log("User document created successfully for:", firebaseUser.uid);
         return true;
-
     } catch (error) {
         console.error("Error creating user document:", error);
+        throw error;
+    }
+}
+
+/**
+ * Specialized sync for Google Sign-in with deep profile details
+ * 
+ * @param {Object} user - Firebase User object
+ * @param {string} providerId - Auth provider ID
+ */
+export async function syncGoogleUser(user, providerId) {
+    if (!user) return;
+
+    try {
+        const userRef = doc(firestore, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+            // New Google User
+            await setDoc(userRef, {
+                name: user.displayName || "Google User",
+                email: user.email,
+                photo: user.photoURL || "",
+                phoneNumber: user.phoneNumber || "",
+                emailVerified: user.emailVerified,
+                metadata: {
+                    creationTime: user.metadata.creationTime,
+                    lastSignInTime: user.metadata.lastSignInTime,
+                },
+                createdAt: serverTimestamp(),
+                lastLoginAt: serverTimestamp(),
+                role: "customer",
+                uid: user.uid,
+                providerId: providerId,
+            });
+        } else {
+            // Returning user - update last login and sync photo
+            await setDoc(userRef, {
+                lastLoginAt: serverTimestamp(),
+                photo: user.photoURL || userSnap.data().photo,
+                emailVerified: user.emailVerified,
+            }, { merge: true });
+        }
+    } catch (error) {
+        console.error("Error syncing Google user:", error);
         throw error;
     }
 }
@@ -75,7 +115,7 @@ export async function getUserProfile(uid) {
  * Updates user profile data in Firestore
  * 
  * @param {string} uid - User ID
- * @param {Object} profileData - Profile data to update (phone, address, city, profileImage, name)
+ * @param {Object} profileData - Profile data to update
  * @returns {Promise<boolean>} - Returns true if successful
  */
 export async function updateUserProfile(uid, profileData) {
@@ -83,17 +123,15 @@ export async function updateUserProfile(uid, profileData) {
 
     try {
         const userDocRef = doc(firestore, "users", uid);
-
-        // Only update specific fields to prevent overwriting other data
         const updateData = {};
         if (profileData.phone !== undefined) updateData.phone = profileData.phone;
         if (profileData.address !== undefined) updateData.address = profileData.address;
         if (profileData.city !== undefined) updateData.city = profileData.city;
         if (profileData.profileImage !== undefined) updateData.profileImage = profileData.profileImage;
+        if (profileData.photo !== undefined) updateData.photo = profileData.photo;
         if (profileData.name !== undefined) updateData.name = profileData.name;
 
         await setDoc(userDocRef, updateData, { merge: true });
-        console.log("User profile updated successfully");
         return true;
     } catch (error) {
         console.error("Error updating user profile:", error);

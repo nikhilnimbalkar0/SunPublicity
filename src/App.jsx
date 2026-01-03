@@ -20,6 +20,8 @@ const AdItemDetails = lazy(() => import('./pages/AdItemDetails'))
 const MapHoardings = lazy(() => import('./pages/MapHoardings'))
 const ViewMap = lazy(() => import('./pages/ViewMap'))
 const ContactMessagesDashboard = lazy(() => import('./pages/ContactMessagesDashboard'))
+const LEDHording = lazy(() => import('./pages/LEDHording'))
+const DynamicCategoryPage = lazy(() => import('./pages/DynamicCategoryPage'))
 
 // Loading fallback component
 const PageLoader = () => (
@@ -44,16 +46,21 @@ function App() {
         <Route path="/shop-boards" element={<ShopLightBoards />} />
         <Route path="/van-promotions" element={<VanPromotions />} />
         <Route path="/wall-paintings" element={<WallPaintings />} />
+        <Route path="/led-hording" element={<LEDHording />} />
 
-        {/* Legacy routes (keep for backward compatibility) */}
+        {/* Legacy routes & Dynamic Routing */}
         <Route path="/downtown-billboard" element={<AutoPromotion />} />
         <Route path="/:category/:id" element={<AdItemDetails />} />
         <Route path="/highway" element={<Hording />} />
         <Route path="/mall" element={<ShopLightBoards />} />
         <Route path="/event" element={<VanPromotions />} />
         <Route path="/led" element={<DigitalBoard />} />
+        <Route path="/led-hording-legacy" element={<LEDHording />} />
         <Route path="/corporate" element={<WallPaintings />} />
         <Route path="/unipole" element={<UnipoleDashboard />} />
+
+        {/* Dynamic catch-all for any new categories */}
+        <Route path="/:category" element={<DynamicCategoryPage />} />
 
         {/* Other routes */}
         <Route path="/wishlist" element={<Wishlist />} />

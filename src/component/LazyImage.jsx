@@ -72,7 +72,7 @@ export default function LazyImage({
             onError(e);
         } else {
             // Default error handler: set placeholder
-            e.currentTarget.src = 'https://via.placeholder.com/800x450?text=Image+Not+Found';
+            e.currentTarget.src = 'https://placehold.co/800x450?text=Image+Not+Found';
         }
     };
 
